@@ -3,7 +3,7 @@ const {
   OnboardingNotFoundError,
 } = require('../errors/onboarding.errors');
 const { WEEKDAYS } = require('../models/onboarding.models');
-const { normalizeRanges } = require('./hours');
+const { normalizeOverrides, normalizeRanges } = require('./hours');
 const { bookingSlug } = require('./slug');
 
 class OnboardingService {
@@ -33,6 +33,10 @@ class OnboardingService {
       slug,
       photoUrl: input.photoUrl ?? null,
       ...(complete ? { completedAt: new Date() } : {}),
+      ...(input.openUntil !== undefined ? { openUntil: input.openUntil } : {}),
+      ...(input.dayOverrides !== undefined
+        ? { dayOverrides: normalizeOverrides(input.dayOverrides) }
+        : {}),
     });
 
     await this.repository.replaceServices(business.id, input.services ?? []);
@@ -112,8 +116,21 @@ class OnboardingService {
         : null,
       services,
       hours,
+      openUntil: dateOnlyValue(business.openUntil),
+      dayOverrides: normalizeOverrides(business.dayOverrides),
     };
   }
+}
+
+function dateOnlyValue(value) {
+  if (!value) return null;
+  if (typeof value === 'string') return value.slice(0, 10);
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    const month = String(value.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(value.getUTCDate()).padStart(2, '0');
+    return `${value.getUTCFullYear()}-${month}-${day}`;
+  }
+  return null;
 }
 
 module.exports = { OnboardingService };

@@ -4,6 +4,7 @@ const { env } = require('./env');
 const { initAuthModels } = require('../features/auth/models/auth.models');
 const {
   initOnboardingModels,
+  CATEGORIES,
 } = require('../features/onboarding/models/onboarding.models');
 const {
   initClientsModels,
@@ -60,12 +61,44 @@ async function ensureAppointmentStatusColumns() {
   }
 }
 
+async function ensureBusinessCategories() {
+  if (sequelize.getDialect() !== 'mysql') return;
+  const listed = CATEGORIES.map((item) => sequelize.escape(item)).join(', ');
+  await sequelize.query(
+    `ALTER TABLE businesses MODIFY COLUMN category ENUM(${listed}) NOT NULL`,
+  );
+}
+
+async function ensureBusinessAgendaColumns() {
+  const queryInterface = sequelize.getQueryInterface();
+  let table;
+  try {
+    table = await queryInterface.describeTable('businesses');
+  } catch (_) {
+    return;
+  }
+  if (!table.open_until) {
+    await queryInterface.addColumn('businesses', 'open_until', {
+      type: Sequelize.DATEONLY,
+      allowNull: true,
+    });
+  }
+  if (!table.day_overrides) {
+    await queryInterface.addColumn('businesses', 'day_overrides', {
+      type: Sequelize.JSON,
+      allowNull: true,
+    });
+  }
+}
+
 async function connectDatabase() {
   registerModels();
   await sequelize.authenticate();
   await sequelize.sync();
   try {
     await ensureAppointmentStatusColumns();
+    await ensureBusinessCategories();
+    await ensureBusinessAgendaColumns();
   } catch (_) {
     // Tabela ainda não existe em ambientes novos; o sync já cobre.
   }

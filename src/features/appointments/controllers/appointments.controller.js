@@ -6,10 +6,18 @@ class AppointmentsController {
   }
 
   list = async (req, res) => {
+    if (String(req.query.exists ?? '') === '1') {
+      const hasAppointments = await this.service.hasAny(req.userId);
+      res.status(200).json({ hasAppointments });
+      return;
+    }
+
     const day = String(req.query.day ?? '').trim();
     const from = String(req.query.from ?? '').trim();
+    const to = String(req.query.to ?? '').trim();
     const dayOk = /^\d{4}-\d{2}-\d{2}$/.test(day);
     const fromOk = /^\d{4}-\d{2}-\d{2}$/.test(from);
+    const toOk = /^\d{4}-\d{2}-\d{2}$/.test(to);
 
     if (!dayOk && !fromOk) {
       res.status(400).json({
@@ -21,9 +29,14 @@ class AppointmentsController {
       return;
     }
 
-    const appointments = dayOk
-      ? await this.service.listByDay(req.userId, day)
-      : await this.service.listFrom(req.userId, from);
+    let appointments;
+    if (dayOk) {
+      appointments = await this.service.listByDay(req.userId, day);
+    } else if (toOk) {
+      appointments = await this.service.listBetween(req.userId, from, to);
+    } else {
+      appointments = await this.service.listFrom(req.userId, from);
+    }
     res.status(200).json({ appointments });
   };
 

@@ -6,7 +6,21 @@ class Business extends Model {}
 class BusinessService extends Model {}
 class BusinessHour extends Model {}
 
-const CATEGORIES = ['beauty', 'fitness', 'health', 'pet', 'art', 'other'];
+const CATEGORIES = [
+  'beauty',
+  'fitness',
+  'health',
+  'pet',
+  'art',
+  'education',
+  'auto',
+  'home',
+  'events',
+  'consulting',
+  'wellness',
+  'food',
+  'other',
+];
 const WEEKDAYS = [
   'sunday',
   'monday',
@@ -62,6 +76,16 @@ function initOnboardingModels(sequelize) {
         type: DataTypes.DATE,
         allowNull: true,
         field: 'completed_at',
+      },
+      openUntil: {
+        type: DataTypes.DATEONLY,
+        allowNull: true,
+        field: 'open_until',
+      },
+      dayOverrides: {
+        type: DataTypes.JSON,
+        allowNull: true,
+        field: 'day_overrides',
       },
     },
     {

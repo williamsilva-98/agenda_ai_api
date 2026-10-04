@@ -39,6 +39,11 @@ describe('Onboarding HTTP', () => {
       monday: [{ start: '07:00', end: '12:00' }],
       wednesday: [{ start: '07:00', end: '11:00' }],
     },
+    openUntil: '2028-01-31',
+    dayOverrides: {
+      '2026-10-16': [],
+      '2026-10-23': [{ start: '10:00', end: '14:00' }],
+    },
   };
 
   it('exige JWT', async () => {
@@ -70,6 +75,11 @@ describe('Onboarding HTTP', () => {
     expect(get.status).toBe(200);
     expect(get.body.city).toBe('Campinas');
     expect(get.body.hours.monday).toEqual([{ start: '07:00', end: '12:00' }]);
+    expect(get.body.openUntil).toBe('2028-01-31');
+    expect(get.body.dayOverrides['2026-10-16']).toEqual([]);
+    expect(get.body.dayOverrides['2026-10-23']).toEqual([
+      { start: '10:00', end: '14:00' },
+    ]);
 
     const complete = await request(app)
       .post('/v1/onboarding/complete')

@@ -49,6 +49,11 @@ class AppointmentsService {
     this.repository = repository;
   }
 
+  async hasAny(userId) {
+    const count = await this.repository.countByUser(userId);
+    return count > 0;
+  }
+
   async listByDay(userId, day) {
     const rows = await this.repository.listByDay(userId, day);
     return rows.map((row) => this.toDto(row));
@@ -56,6 +61,11 @@ class AppointmentsService {
 
   async listFrom(userId, day) {
     const rows = await this.repository.listFrom(userId, day);
+    return rows.map((row) => this.toDto(row));
+  }
+
+  async listBetween(userId, from, to) {
+    const rows = await this.repository.listBetween(userId, from, to);
     return rows.map((row) => this.toDto(row));
   }
 

@@ -46,6 +46,10 @@ class AppointmentsRepository {
   findById(userId, id) {
     return Appointment.findOne({ where: { id, userId } });
   }
+
+  countByUser(userId) {
+    return Appointment.count({ where: { userId } });
+  }
 }
 
 module.exports = { AppointmentsRepository };

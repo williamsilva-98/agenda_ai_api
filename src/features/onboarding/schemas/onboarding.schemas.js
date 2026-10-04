@@ -21,6 +21,19 @@ const serviceSchema = z.object({
   selected: z.boolean().default(true),
 });
 
+const dayKeySchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine((value) => {
+    const [year, month, day] = value.split('-').map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day));
+    return (
+      date.getUTCFullYear() === year &&
+      date.getUTCMonth() === month - 1 &&
+      date.getUTCDate() === day
+    );
+  }, 'Data inválida');
+
 const hoursSchema = z
   .record(z.enum(WEEKDAYS), z.array(timeRangeSchema))
   .default({});
@@ -41,6 +54,8 @@ const onboardingBodySchema = z.object({
   photoUrl: z.string().url().nullable().optional(),
   services: z.array(serviceSchema).default([]),
   hours: hoursSchema,
+  openUntil: dayKeySchema.nullable().optional(),
+  dayOverrides: z.record(dayKeySchema, z.array(timeRangeSchema)).optional(),
 });
 
 module.exports = {

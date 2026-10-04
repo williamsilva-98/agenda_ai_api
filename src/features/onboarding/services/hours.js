@@ -33,8 +33,19 @@ function normalizeRanges(raw) {
     .map((range) => ({ start: range.start, end: range.end }));
 }
 
+function normalizeOverrides(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  const next = {};
+  for (const [key, value] of Object.entries(raw)) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) continue;
+    next[key] = normalizeRanges(value);
+  }
+  return next;
+}
+
 module.exports = {
   normalizeRanges,
+  normalizeOverrides,
   parseMinutes,
   formatMinutes,
 };
