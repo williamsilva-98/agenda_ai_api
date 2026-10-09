@@ -24,9 +24,20 @@ class AppointmentAlreadyCompletedError extends AppError {
   }
 }
 
+class AppointmentAlreadyCancelledError extends AppError {
+  constructor() {
+    super(
+      'Este agendamento já está cancelado.',
+      409,
+      'APPOINTMENT_ALREADY_CANCELLED',
+    );
+  }
+}
+
 module.exports = {
   AppointmentSlotTakenError,
   AppointmentInvalidSlotError,
   AppointmentNotFoundError,
   AppointmentAlreadyCompletedError,
+  AppointmentAlreadyCancelledError,
 };

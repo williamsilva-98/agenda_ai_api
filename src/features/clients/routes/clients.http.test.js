@@ -18,6 +18,15 @@ async function authenticatedUser(app, email) {
   return verify.body.accessToken;
 }
 
+function futureDay(monthsAhead = 2) {
+  const date = new Date();
+  date.setMonth(date.getMonth() + monthsAhead);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 describe('Clients HTTP', () => {
   const app = createApp();
 
@@ -73,6 +82,174 @@ describe('Clients HTTP', () => {
       .set('Authorization', `Bearer ${token}`);
     expect(missing.status).toBe(404);
     expect(missing.body.error.code).toBe('CLIENT_NOT_FOUND');
+  });
+
+  it('pesquisa clientes pelo nome depois de 3 letras', async () => {
+    const token = await authenticatedUser(app, 'clients-search@gmail.com');
+
+    const maria = await request(app)
+      .post('/v1/clients')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Maria Santos', phone: '11992345678' });
+    const ana = await request(app)
+      .post('/v1/clients')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Ana Lima', phone: '11987654321' });
+    expect(maria.status).toBe(201);
+    expect(ana.status).toBe(201);
+
+    const shortQuery = await request(app)
+      .get('/v1/clients')
+      .query({ q: 'ma' })
+      .set('Authorization', `Bearer ${token}`);
+    expect(shortQuery.status).toBe(200);
+    expect(shortQuery.body.clients).toHaveLength(2);
+
+    const search = await request(app)
+      .get('/v1/clients')
+      .query({ q: 'mar' })
+      .set('Authorization', `Bearer ${token}`);
+    expect(search.status).toBe(200);
+    expect(search.body.clients.map((client) => client.name)).toEqual([
+      'Maria Santos',
+    ]);
+  });
+
+  it('pesquisa por nome, e-mail ou telefone', async () => {
+    const token = await authenticatedUser(app, 'clients-search-fields@gmail.com');
+
+    const maria = await request(app)
+      .post('/v1/clients')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        name: 'Maria Santos',
+        phone: '11992345678',
+        email: 'maria@gmail.com',
+      });
+    const ana = await request(app)
+      .post('/v1/clients')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        name: 'Ana Lima',
+        phone: '47988887777',
+        email: 'ana@outlook.com',
+      });
+    expect(maria.status).toBe(201);
+    expect(ana.status).toBe(201);
+
+    const byEmail = await request(app)
+      .get('/v1/clients')
+      .query({ q: 'outlook' })
+      .set('Authorization', `Bearer ${token}`);
+    expect(byEmail.status).toBe(200);
+    expect(byEmail.body.clients.map((client) => client.name)).toEqual([
+      'Ana Lima',
+    ]);
+
+    const byPhone = await request(app)
+      .get('/v1/clients')
+      .query({ q: '99234' })
+      .set('Authorization', `Bearer ${token}`);
+    expect(byPhone.body.clients.map((client) => client.name)).toEqual([
+      'Maria Santos',
+    ]);
+
+    const byFormattedPhone = await request(app)
+      .get('/v1/clients')
+      .query({ q: '(47) 98888' })
+      .set('Authorization', `Bearer ${token}`);
+    expect(byFormattedPhone.body.clients.map((client) => client.name)).toEqual([
+      'Ana Lima',
+    ]);
+  });
+
+  it('lista os clientes mais frequentes', async () => {
+    const token = await authenticatedUser(app, 'clients-frequent@gmail.com');
+    const day = futureDay();
+
+    const maria = await request(app)
+      .post('/v1/clients')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Maria Santos', phone: '11992345678' });
+    const joao = await request(app)
+      .post('/v1/clients')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'João Pereira', phone: '11987654321' });
+    const ana = await request(app)
+      .post('/v1/clients')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Ana Lima', phone: '47988887777' });
+    expect(maria.status).toBe(201);
+    expect(joao.status).toBe(201);
+    expect(ana.status).toBe(201);
+
+    const first = await request(app)
+      .post('/v1/appointments')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        clientId: maria.body.id,
+        serviceId: 'corte',
+        serviceName: 'Corte',
+        day,
+        slot: '10:00',
+        durationMinutes: 60,
+        priceCents: 8000,
+      });
+    const second = await request(app)
+      .post('/v1/appointments')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        clientId: maria.body.id,
+        serviceId: 'corte',
+        serviceName: 'Corte',
+        day,
+        slot: '14:00',
+        durationMinutes: 60,
+        priceCents: 8000,
+      });
+    const third = await request(app)
+      .post('/v1/appointments')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        clientId: joao.body.id,
+        serviceId: 'barba',
+        serviceName: 'Barba',
+        day,
+        slot: '16:00',
+        durationMinutes: 30,
+        priceCents: 4500,
+      });
+    expect(first.status).toBe(201);
+    expect(second.status).toBe(201);
+    expect(third.status).toBe(201);
+
+    const frequent = await request(app)
+      .get('/v1/clients')
+      .query({ frequent: 10 })
+      .set('Authorization', `Bearer ${token}`);
+    expect(frequent.status).toBe(200);
+    expect(frequent.body.clients.map((client) => client.name)).toEqual([
+      'Maria Santos',
+      'João Pereira',
+      'Ana Lima',
+    ]);
+    expect(frequent.body.clients.map((client) => client.visits)).toEqual([
+      2, 1, 0,
+    ]);
+
+    const top = await request(app)
+      .get('/v1/clients')
+      .query({ frequent: 2 })
+      .set('Authorization', `Bearer ${token}`);
+    expect(top.body.clients.map((client) => client.name)).toEqual([
+      'Maria Santos',
+      'João Pereira',
+    ]);
+
+    const full = await request(app)
+      .get('/v1/clients')
+      .set('Authorization', `Bearer ${token}`);
+    expect(full.body.clients).toHaveLength(3);
   });
 
   it('permite cadastro só com nome e telefone', async () => {

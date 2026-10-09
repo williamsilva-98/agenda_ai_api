@@ -1,4 +1,4 @@
-# AgendaAí API
+# AgendaX API
 
 API Node.js (Express + JavaScript) com MySQL/Sequelize, organizada por features no estilo MVC.
 

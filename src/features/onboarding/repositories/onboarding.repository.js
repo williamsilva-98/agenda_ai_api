@@ -33,6 +33,19 @@ class OnboardingRepository {
     });
   }
 
+  findDetailedBySlug(slug) {
+    return Business.findOne({
+      where: { slug },
+      include: [
+        { model: BusinessService, as: 'services' },
+        { model: BusinessHour, as: 'hours' },
+      ],
+      order: [
+        [{ model: BusinessService, as: 'services' }, 'sortOrder', 'ASC'],
+      ],
+    });
+  }
+
   async upsertBusiness(userId, data) {
     const existing = await Business.findOne({ where: { userId } });
     if (existing) {

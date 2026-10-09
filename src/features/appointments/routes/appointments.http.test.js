@@ -155,4 +155,238 @@ describe('Appointments HTTP', () => {
     expect(insights.body.revenueCents).toBe(15000);
     expect(insights.body.series).toEqual(expect.any(Array));
   });
+
+  it('aceita vários serviços no mesmo horário e bloqueia só o mais longo', async () => {
+    const token = await authenticatedUser(app, 'appointments-multi@gmail.com');
+    const day = futureDay(3);
+
+    const client = await request(app)
+      .post('/v1/clients')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        name: 'Ana Lima',
+        phone: '11987654321',
+      });
+    expect(client.status).toBe(201);
+
+    const create = await request(app)
+      .post('/v1/appointments')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        clientId: client.body.id,
+        serviceId: 'coloracao',
+        serviceName: 'Coloração',
+        day,
+        slot: '14:00',
+        durationMinutes: 120,
+        priceCents: 18000,
+        services: [
+          {
+            serviceId: 'coloracao',
+            serviceName: 'Coloração',
+            durationMinutes: 120,
+            priceCents: 18000,
+          },
+          {
+            serviceId: 'unha',
+            serviceName: 'Unha',
+            durationMinutes: 45,
+            priceCents: 5000,
+          },
+        ],
+      });
+
+    expect(create.status).toBe(201);
+    expect(create.body.durationMinutes).toBe(120);
+    expect(create.body.priceCents).toBe(23000);
+    expect(create.body.serviceName).toBe('Coloração · Unha');
+    expect(create.body.services).toHaveLength(2);
+
+    const during = await request(app)
+      .post('/v1/appointments')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        clientId: client.body.id,
+        serviceId: 'corte',
+        serviceName: 'Corte',
+        day,
+        slot: '15:00',
+        durationMinutes: 30,
+        priceCents: 4000,
+      });
+    expect(during.status).toBe(409);
+
+    const after = await request(app)
+      .post('/v1/appointments')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        clientId: client.body.id,
+        serviceId: 'corte',
+        serviceName: 'Corte',
+        day,
+        slot: '16:00',
+        durationMinutes: 30,
+        priceCents: 4000,
+      });
+    expect(after.status).toBe(201);
+  });
+
+  it('cancela o agendamento, guarda o motivo e libera o horário', async () => {
+    const token = await authenticatedUser(app, 'appointments-cancel@gmail.com');
+    const day = futureDay();
+
+    const client = await request(app)
+      .post('/v1/clients')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'João Lima', phone: '47988880000' });
+    expect(client.status).toBe(201);
+
+    const create = await request(app)
+      .post('/v1/appointments')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        clientId: client.body.id,
+        serviceId: 'corte',
+        serviceName: 'Corte',
+        day,
+        slot: '11:00',
+        durationMinutes: 60,
+        priceCents: 8000,
+      });
+    expect(create.status).toBe(201);
+
+    const missing = await request(app)
+      .post(`/v1/appointments/${create.body.id}/cancel`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({});
+    expect(missing.status).toBe(400);
+
+    const cancel = await request(app)
+      .post(`/v1/appointments/${create.body.id}/cancel`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ reason: 'client_cancelled' });
+    expect(cancel.status).toBe(200);
+    expect(cancel.body.status).toBe('cancelled');
+    expect(cancel.body.cancelReason).toBe('client_cancelled');
+    expect(cancel.body.completed).toBe(false);
+
+    const again = await request(app)
+      .post(`/v1/appointments/${create.body.id}/cancel`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ reason: 'client_no_show' });
+    expect(again.status).toBe(409);
+
+    const rebook = await request(app)
+      .post('/v1/appointments')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        clientId: client.body.id,
+        serviceId: 'barba',
+        serviceName: 'Barba',
+        day,
+        slot: '11:00',
+        durationMinutes: 30,
+        priceCents: 4000,
+      });
+    expect(rebook.status).toBe(201);
+
+    const past = await request(app)
+      .post('/v1/appointments')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        clientId: client.body.id,
+        serviceId: 'corte',
+        serviceName: 'Corte',
+        day: '2026-01-10',
+        slot: '09:00',
+        durationMinutes: 30,
+        priceCents: 5000,
+      });
+    expect(past.status).toBe(201);
+
+    const pastCancel = await request(app)
+      .post(`/v1/appointments/${past.body.id}/cancel`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ reason: 'client_no_show' });
+    expect(pastCancel.status).toBe(200);
+
+    const listed = await request(app)
+      .get('/v1/appointments')
+      .query({ day: '2026-01-10' })
+      .set('Authorization', `Bearer ${token}`);
+    expect(listed.status).toBe(200);
+    expect(listed.body.appointments).toHaveLength(1);
+    expect(listed.body.appointments[0].status).toBe('cancelled');
+    expect(listed.body.appointments[0].completed).toBe(false);
+    expect(listed.body.appointments[0].cancelReason).toBe('client_no_show');
+  });
+
+  it('lista o histórico de um cliente, inclusive o passado', async () => {
+    const token = await authenticatedUser(app, 'appointments-client@gmail.com');
+    const day = futureDay();
+
+    const client = await request(app)
+      .post('/v1/clients')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Ana Costa', phone: '47977770000' });
+    expect(client.status).toBe(201);
+
+    const other = await request(app)
+      .post('/v1/clients')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Bruno Dias', phone: '47966660000' });
+    expect(other.status).toBe(201);
+
+    const past = await request(app)
+      .post('/v1/appointments')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        clientId: client.body.id,
+        serviceId: 'corte',
+        serviceName: 'Corte',
+        day: '2026-01-10',
+        slot: '09:00',
+        durationMinutes: 30,
+        priceCents: 5000,
+      });
+    expect(past.status).toBe(201);
+
+    const upcoming = await request(app)
+      .post('/v1/appointments')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        clientId: client.body.id,
+        serviceId: 'barba',
+        serviceName: 'Barba',
+        day,
+        slot: '15:00',
+        durationMinutes: 30,
+        priceCents: 4000,
+      });
+    expect(upcoming.status).toBe(201);
+
+    await request(app)
+      .post('/v1/appointments')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        clientId: other.body.id,
+        serviceId: 'corte',
+        serviceName: 'Corte',
+        day,
+        slot: '16:00',
+        durationMinutes: 30,
+        priceCents: 5000,
+      });
+
+    const listed = await request(app)
+      .get('/v1/appointments')
+      .query({ clientId: client.body.id })
+      .set('Authorization', `Bearer ${token}`);
+    expect(listed.status).toBe(200);
+    expect(listed.body.appointments).toHaveLength(2);
+    expect(listed.body.appointments.map((item) => item.serviceName)).toEqual([
+      'Barba',
+      'Corte',
+    ]);
+  });
 });

@@ -13,6 +13,16 @@ class ClientsService {
     return rows.map((row) => this.toDto(row));
   }
 
+  async search(userId, query) {
+    const rows = await this.repository.search(userId, query);
+    return rows.map((row) => this.toDto(row));
+  }
+
+  async listFrequent(userId, limit) {
+    const rows = await this.repository.listFrequent(userId, limit);
+    return rows.map((row) => this.toDto(row));
+  }
+
   async get(userId, id) {
     const client = await this.repository.findById(userId, id);
     if (!client) {
@@ -59,6 +69,7 @@ class ClientsService {
       city: client.city,
       stateCode: client.stateCode,
       notes: client.notes,
+      visits: Number(client.get('visitCount') ?? 0),
       place,
       createdAt: client.createdAt ? client.createdAt.toISOString() : null,
     };

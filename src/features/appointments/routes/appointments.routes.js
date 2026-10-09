@@ -21,6 +21,7 @@ function createAppointmentsRoutes() {
   router.get('/', asyncHandler(controller.list));
   router.post('/', asyncHandler(controller.create));
   router.post('/:id/complete', asyncHandler(controller.complete));
+  router.post('/:id/cancel', asyncHandler(controller.cancel));
 
   return router;
 }

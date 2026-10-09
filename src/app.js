@@ -12,6 +12,7 @@ const {
 const {
   createAppointmentsRoutes,
 } = require('./features/appointments/routes/appointments.routes');
+const { createPublicRoutes } = require('./features/public/routes/public.routes');
 const { errorHandler } = require('./shared/http/error-handler');
 
 function createApp() {
@@ -28,6 +29,7 @@ function createApp() {
   api.use('/onboarding', createOnboardingRoutes());
   api.use('/clients', createClientsRoutes());
   api.use('/appointments', createAppointmentsRoutes());
+  api.use('/public', createPublicRoutes());
 
   app.use(env.apiPrefix, api);
   app.use(errorHandler);

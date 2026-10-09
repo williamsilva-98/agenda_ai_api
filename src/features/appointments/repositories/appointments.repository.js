@@ -26,6 +26,16 @@ class AppointmentsRepository {
     });
   }
 
+  listByClient(userId, clientId) {
+    return Appointment.findAll({
+      where: { userId, clientId },
+      order: [
+        ['day', 'DESC'],
+        ['slot', 'DESC'],
+      ],
+    });
+  }
+
   listBetween(userId, from, to) {
     return Appointment.findAll({
       where: {

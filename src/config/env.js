@@ -17,7 +17,7 @@ const env = {
   db: {
     host: required('DB_HOST', '127.0.0.1'),
     port: Number(process.env.DB_PORT ?? 3307),
-    name: required('DB_NAME', 'agenda_ai'),
+    name: required('DB_NAME', 'agendax'),
     user: required('DB_USER', 'agenda'),
     password: required('DB_PASSWORD', 'agenda_secret'),
   },

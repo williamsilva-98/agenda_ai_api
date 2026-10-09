@@ -87,7 +87,7 @@ describe('Onboarding HTTP', () => {
       .send(body);
     expect(complete.status).toBe(200);
     expect(complete.body.completed).toBe(true);
-    expect(complete.body.bookingLink).toBe('agendaai.app/box-fit');
+    expect(complete.body.bookingLink).toBe('agendax.app/box-fit');
   });
 
   it('valida payload', async () => {

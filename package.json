@@ -1,8 +1,8 @@
 {
-  "name": "agenda_ai_api",
+  "name": "agendax_api",
   "version": "1.0.0",
   "private": true,
-  "description": "AgendaAí API — autenticação e agendamentos.",
+  "description": "AgendaX API — autenticação e agendamentos.",
   "main": "src/server.js",
   "scripts": {
     "dev": "node --watch src/server.js",

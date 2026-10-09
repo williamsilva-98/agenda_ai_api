@@ -1,4 +1,7 @@
-const { appointmentBodySchema } = require('../schemas/appointments.schemas');
+const {
+  appointmentBodySchema,
+  cancelBodySchema,
+} = require('../schemas/appointments.schemas');
 
 class AppointmentsController {
   constructor(service) {
@@ -9,6 +12,20 @@ class AppointmentsController {
     if (String(req.query.exists ?? '') === '1') {
       const hasAppointments = await this.service.hasAny(req.userId);
       res.status(200).json({ hasAppointments });
+      return;
+    }
+
+    const clientId = String(req.query.clientId ?? '').trim();
+    if (
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        clientId,
+      )
+    ) {
+      const appointments = await this.service.listByClient(
+        req.userId,
+        clientId,
+      );
+      res.status(200).json({ appointments });
       return;
     }
 
@@ -48,6 +65,16 @@ class AppointmentsController {
 
   complete = async (req, res) => {
     const appointment = await this.service.complete(req.userId, req.params.id);
+    res.status(200).json(appointment);
+  };
+
+  cancel = async (req, res) => {
+    const body = cancelBodySchema.parse(req.body);
+    const appointment = await this.service.cancel(
+      req.userId,
+      req.params.id,
+      body.reason,
+    );
     res.status(200).json(appointment);
   };
 

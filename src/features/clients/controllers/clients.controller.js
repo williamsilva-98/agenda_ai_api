@@ -6,7 +6,16 @@ class ClientsController {
   }
 
   list = async (req, res) => {
-    const clients = await this.service.list(req.userId);
+    const query = String(req.query.q ?? '').trim();
+    const frequent = Number(req.query.frequent);
+    let clients;
+    if (query.length >= 3) {
+      clients = await this.service.search(req.userId, query);
+    } else if (Number.isInteger(frequent) && frequent > 0) {
+      clients = await this.service.listFrequent(req.userId, frequent);
+    } else {
+      clients = await this.service.list(req.userId);
+    }
     res.status(200).json({ clients });
   };
 

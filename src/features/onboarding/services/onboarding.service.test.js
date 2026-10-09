@@ -54,7 +54,7 @@ describe('OnboardingService', () => {
 
     expect(saved.name).toBe('Studio Ana');
     expect(saved.slug).toBe('studio-ana');
-    expect(saved.bookingLink).toBe('agendaai.app/studio-ana');
+    expect(saved.bookingLink).toBe('agendax.app/studio-ana');
     expect(saved.completed).toBe(false);
     expect(saved.services).toHaveLength(2);
     expect(saved.hours.monday).toEqual([{ start: '09:00', end: '18:00' }]);

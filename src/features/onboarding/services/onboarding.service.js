@@ -109,7 +109,7 @@ class OnboardingService {
       whatsapp: business.whatsapp,
       photoUrl: business.photoUrl,
       slug: business.slug,
-      bookingLink: `agendaai.app/${business.slug}`,
+      bookingLink: `agendax.app/${business.slug}`,
       completed: Boolean(business.completedAt),
       completedAt: business.completedAt
         ? business.completedAt.toISOString()

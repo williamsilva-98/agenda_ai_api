@@ -59,6 +59,12 @@ async function ensureAppointmentStatusColumns() {
       allowNull: true,
     });
   }
+  if (!table.cancel_reason) {
+    await queryInterface.addColumn('appointments', 'cancel_reason', {
+      type: Sequelize.STRING(40),
+      allowNull: true,
+    });
+  }
 }
 
 async function ensureBusinessCategories() {
@@ -67,6 +73,29 @@ async function ensureBusinessCategories() {
   await sequelize.query(
     `ALTER TABLE businesses MODIFY COLUMN category ENUM(${listed}) NOT NULL`,
   );
+}
+
+async function ensureAppointmentServiceLines() {
+  const queryInterface = sequelize.getQueryInterface();
+  let table;
+  try {
+    table = await queryInterface.describeTable('appointments');
+  } catch (_) {
+    return;
+  }
+  if (!table.services) {
+    await queryInterface.addColumn('appointments', 'services', {
+      type: Sequelize.JSON,
+      allowNull: true,
+    });
+  }
+  const nameType = String(table.service_name?.type ?? '');
+  if (table.service_name && !nameType.includes('500')) {
+    await queryInterface.changeColumn('appointments', 'service_name', {
+      type: Sequelize.STRING(500),
+      allowNull: false,
+    });
+  }
 }
 
 async function ensureBusinessAgendaColumns() {
@@ -97,6 +126,7 @@ async function connectDatabase() {
   await sequelize.sync();
   try {
     await ensureAppointmentStatusColumns();
+    await ensureAppointmentServiceLines();
     await ensureBusinessCategories();
     await ensureBusinessAgendaColumns();
   } catch (_) {

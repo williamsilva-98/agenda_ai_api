@@ -40,9 +40,13 @@ function initAppointmentsModels(sequelize) {
         field: 'service_id',
       },
       serviceName: {
-        type: DataTypes.STRING(120),
+        type: DataTypes.STRING(500),
         allowNull: false,
         field: 'service_name',
+      },
+      services: {
+        type: DataTypes.JSON,
+        allowNull: true,
       },
       day: {
         type: DataTypes.DATEONLY,
@@ -78,6 +82,11 @@ function initAppointmentsModels(sequelize) {
         type: DataTypes.DATE,
         allowNull: true,
         field: 'completed_at',
+      },
+      cancelReason: {
+        type: DataTypes.STRING(40),
+        allowNull: true,
+        field: 'cancel_reason',
       },
     },
     {
